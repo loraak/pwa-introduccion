@@ -5,14 +5,14 @@ importScripts('/src/js/utility.js')
 
 // static -> archivos del "app shell" (HTML, CSS, JS, imágenes base) que se guardan desde el inicio. 
 // dyanmic -> todo lo que se va descargando mientras el usuario navega. 
-var CACHE_STATIC_NAME = 'static-v6';
-var CACHE_DYNAMIC_NAME = 'dynamic-v6';
+var CACHE_STATIC_NAME = 'static-v7';
+var CACHE_DYNAMIC_NAME = 'dynamic-v7';
 
 var STATIC_FILES = [
     '/',
     '/index.html',
     '/offline.html',
-    '/manifest.json',
+    //'/manifest.json',
     '/src/js/app.js',
     '/src/js/feed.js',
     '/src/js/idb.js',
@@ -222,4 +222,40 @@ self.addEventListener('fetch', function(event) {
             });
         })
     );
+});
+
+self.addEventListener("sync", function (event) {
+  console.log("[Service Worker] Background syncing", event);
+  if (event.tag === "sync-new-posts") {
+    console.log("[Service Worker] Syncing new Posts");
+    event.waitUntil(
+      readAllData("sync-posts")
+      .then(function (data) {
+        for (var dt of data) {
+          fetch("https://uteq-gram-758a9-default-rtdb.firebaseio.com/post.json", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              id: dt.id,
+              title: dt.title,
+              location: dt.location,
+              //image: 'https://firebasestorage.googleapis.com/v0/b/pwa2-1a1a8.firebasestorage.app/o/sf-boat.jpg?alt=media&token=e33adc41-0a87-44fd-8df9-951dda30602f'
+            })
+          })
+          .then(function (res) {
+            console.log("Sent data", res);
+            if (res.ok) {
+              deleteItemFromData("sync-posts", dt.id);
+            }
+          })
+          .catch(function (err) {
+            console.log("Error while sending data", err);
+          });
+        }
+      })
+    );
+  }
 });
